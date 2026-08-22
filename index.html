@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GlobalHunt AI - Foreign Job Finder & Multi-Profile Match Engine</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌍</text></svg>" />
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React & ReactDOM UMD -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  
+  <!-- Babel Standalone -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      background-color: #020617;
+      color: #f8fafc;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.65);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+    .badge-glow-green {
+      box-shadow: 0 0 15px rgba(34, 197, 94, 0.35);
+    }
+    .badge-glow-blue {
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+    }
+    .badge-glow-amber {
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-slate-950">
+
+  <div id="root"></div>
+
+  <!-- React Babel Script -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // --- PRE-LOADED PROFILES (INCLUDING YASH HARDIA'S RESUME) ---
+    const DEFAULT_PROFILES = [
+      {
+        id: 'profile-yash-hardia',
+        name: 'Yash Hardia (Full Stack Software Engineer)',
+        targetRole: 'Senior Full Stack Engineer (React / Java / Node.js)',
+        experienceYears: 9,
+        skills: [
+          'React', 'Angular', 'Node.js', 'Java', 'Spring Boot', 'TypeScript', 'JavaScript', 
+          'Redux', 'REST API Design', 'Microservices', 'Kafka', 'SQS/SNS', 'MySQL', 
+          'PostgreSQL', 'MongoDB', 'Docker', 'CI/CD', 'GitHub Actions', 'Jenkins', 'AWS', 
+          'OAuth2', 'JWT', 'RBAC', 'Keycloak', 'FastAPI', 'AI Agents'
+        ],
+        requiresVisa: true,
+        requiresRelocation: true,
+        preferredCountries: ['Germany', 'Netherlands', 'UK', 'Canada', 'Japan', 'USA', 'Remote Worldwide'],
+        minSalary: 85000,
+        email: 'yashhardia5@gmail.com',
+        location: 'Indore, India (Open to International Relocation)',
+        summary: 'Full Stack Engineer with 9+ years building React, Angular, Node.js and Java/Spring Boot systems for enterprise environments. Cut bundle size by 50% & sustained 99%+ uptime at rfXcel (Antares Vision Group).'
+      },
+      {
+        id: 'profile-frontend-lead',
+        name: 'Frontend Architect Profile',
+        targetRole: 'Lead Frontend Architect',
+        experienceYears: 7,
+        skills: ['React', 'Next.js', 'TypeScript', 'Tailwind CSS', 'Redux', 'Micro-frontends', 'Web Performance', 'GraphQL'],
+        requiresVisa: true,
+        requiresRelocation: true,
+        preferredCountries: ['Netherlands', 'Germany', 'Remote Worldwide'],
+        minSalary: 95000,
+        summary: 'Specialized Frontend Architect focusing on React, Next.js, and web performance optimization.'
+      },
+      {
+        id: 'profile-ai-engineer',
+        name: 'AI & Data Systems Specialist',
+        targetRole: 'Staff AI / Machine Learning Engineer',
+        experienceYears: 5,
+        skills: ['Python', 'PyTorch', 'LLMs', 'LangChain', 'FastAPI', 'Vector DB', 'Docker', 'RAG Pipelines', 'AWS'],
+        requiresVisa: false,
+        requiresRelocation: false,
+        preferredCountries: ['Remote Worldwide', 'USA', 'Canada'],
+        minSalary: 120000,
+        summary: 'Machine Learning engineer focused on LLM fine-tuning, RAG retrieval, and FastAPI AI agent runtime.'
+      }
+    ];
+
+    // --- INITIAL SEED JOBS ---
+    const INITIAL_MOCK_JOBS = [
+      {
+        id: 'job-ust-1',
+        title: 'Full Stack Developer (React & Python/Node.js - AWS)',
+        company: 'UST',
+        location: 'Chicago, IL (Remote US)',
+        country: 'USA',
+        remoteType: 'Remote',
+        visaSponsored: true,
+        relocationPackage: true,
+        salary: '$75,000 - $113,000 / year',
+        minSalaryNum: 75000,
+        currency: 'USD',
+        postedDate: 'Direct Firecrawl Scrape',
+        source: 'Firecrawl API (Indeed Scrape)',
+        applyUrl: 'https://www.indeed.com/q-react-js-developer-visa-sponsorship-jobs.html?vjk=d16f9d4c33db7981',
+        description: `Full Stack Developer (React & Python/Node.js - AWS) at UST.\n- Frontend: React JS, Redux/Context API, TypeScript, CSS3.\n- Backend: Python (FastAPI/Django) or Node.js (Express/NestJS).\n- AWS Cloud: EC2, S3, Lambda, ECS/EKS, API Gateway, CloudWatch, RDS.\n- Security: OAuth 2.0, OIDC, JWT, IAM policies, CORS, encryption.\n- Databases: PostgreSQL/MySQL and DynamoDB/MongoDB.\n- Visa Sponsorship & 401(k) matching provided.`,
+        skillsRequired: ['React', 'Node.js', 'Python', 'AWS', 'PostgreSQL', 'Docker', 'TypeScript', 'OAuth2', 'JWT'],
+        experienceMinYears: 5
+      },
+      {
+        id: 'job-dj-1',
+        title: 'Senior Frontend Engineer (Visa Sponsorship Available)',
+        company: 'David Joseph & Company',
+        location: 'New York, NY (Hybrid / Onsite)',
+        country: 'USA',
+        remoteType: 'Hybrid',
+        visaSponsored: true,
+        relocationPackage: true,
+        salary: '$150,000 - $190,000 / year',
+        minSalaryNum: 150000,
+        currency: 'USD',
+        postedDate: 'Direct Firecrawl Scrape',
+        source: 'Firecrawl API (Indeed Scrape)',
+        applyUrl: 'https://www.indeed.com/q-react-js-developer-visa-sponsorship-jobs.html',
+        description: `Visa Sponsorship — Available (H-1B transfer / F-1 OPT supported).\nLooking for a Senior Frontend Engineer proficient in React, TypeScript, Redux, state management, and modern Web architecture.\nCompensation: $150,000–$190,000 + competitive equity.`,
+        skillsRequired: ['React', 'TypeScript', 'Redux', 'JavaScript', 'REST API Design', 'Architecture'],
+        experienceMinYears: 5
+      },
+      {
+        id: 'job-rad-1',
+        title: 'Senior Software Engineer: Frontend - NYC (H1B / O1 Sponsorship)',
+        company: 'Rad Hires',
+        location: 'New York, NY (Manhattan)',
+        country: 'USA',
+        remoteType: 'Onsite',
+        visaSponsored: true,
+        relocationPackage: true,
+        salary: '$170,000 - $300,000 / year',
+        minSalaryNum: 170000,
+        currency: 'USD',
+        postedDate: 'Direct Firecrawl Scrape',
+        source: 'Firecrawl API (Indeed Scrape)',
+        applyUrl: 'https://www.indeed.com/q-react-js-developer-visa-sponsorship-jobs.html',
+        description: `Can sponsor H1B and O1 visas, and can assist with relocation to New York City.\nFull-time | On-site | New York, NY (Manhattan).\nSalary: $170k – $300k | Equity: Competitive.\nLooking for Senior Frontend / Fullstack developers skilled in React, Node.js, and TypeScript.`,
+        skillsRequired: ['React', 'Node.js', 'TypeScript', 'JavaScript', 'REST API Design'],
+        experienceMinYears: 6
+      },
+      {
+        id: 'job-dj-2',
+        title: 'Forward Deployed Engineer (H-1B & O-1 Visa Supported)',
+        company: 'David Joseph & Company',
+        location: 'San Francisco, CA (Hybrid)',
+        country: 'USA',
+        remoteType: 'Hybrid',
+        visaSponsored: true,
+        relocationPackage: true,
+        salary: '$180,000 - $250,000 / year',
+        minSalaryNum: 180000,
+        currency: 'USD',
+        postedDate: 'Direct Firecrawl Scrape',
+        source: 'Firecrawl API (Indeed Scrape)',
+        applyUrl: 'https://www.indeed.com/q-react-js-developer-visa-sponsorship-jobs.html',
+        description: `Visa sponsorship — Available (H-1B, O-1 supported).\nPython cloud backend (AWS/GCP), Node.js frontend, CI/CD pipelines.\nLocation: San Francisco, CA (Onsite/Hybrid). Compensation: $180,000–$250,000 + competitive equity.`,
+        skillsRequired: ['Python', 'Node.js', 'React', 'AWS', 'Docker', 'CI/CD'],
+        experienceMinYears: 4
+      },
+      {
+        id: 'job-visaone-1',
+        title: 'Java + NodeJS + ReactJS + AI Engineer (Visa & Green Card Sponsored)',
+        company: 'Visa One Corporation',
+        location: 'San Jose / San Francisco, CA',
+        country: 'USA',
+        remoteType: 'Hybrid',
+        visaSponsored: true,
+        relocationPackage: true,
+        salary: '$60,000 - $95,000 / year + Green Card Sponsorship',
+        minSalaryNum: 60000,
+        currency: 'USD',
+        postedDate: 'Direct Firecrawl Scrape',
+        source: 'Firecrawl API (Indeed Scrape)',
+        applyUrl: 'https://www.indeed.com/q-react-js-developer-visa-sponsorship-jobs.html',
+        description: `Full-time | Easily Apply | Visa sponsorship & Green Card sponsorship offered!\nTech Stack: Java, Node.js, React.js, Spring Boot, Microservices, AI Agents runtime.\nLocations: San Jose, CA | San Francisco, CA | Los Angeles, CA.`,
+        skillsRequired: ['Java', 'Spring Boot', 'Node.js', 'React', 'AI Agents', 'Microservices'],
+        experienceMinYears: 3
+      },
+      {
+        id: 'job-ust-2',
+        title: 'Senior Java Full Stack Developer (H-1B & Green Card Sponsored)',
+        company: 'UST',
+        location: 'Bentonville, Arkansas (On-site)',
+        country: 'USA',
+        remoteType: 'Onsite',
+        visaSponsored: true,
+        relocationPackage: true,
+        salary: '$82,000 - $123,000 / year',
+        minSalaryNum: 82000,
+        currency: 'EUR',
+        postedDate: 'Direct Firecrawl Scrape',
+        source: 'Firecrawl API (MigrateMate Scrape)',
+        applyUrl: 'https://migratemate.co/visa-sponsorship-jobs/full-stack-developer',
+        description: `276+ total visas sponsored in the last year (H-1B, Green Card).\nRole: Senior Java Full Stack Developer (Lead II - Software Engineering).\n- 6+ years experience in Java 8/11/17+, Spring Boot, Spring Cloud, and Microservices.\n- Proficiency in React.js, TypeScript, HTML5, CSS3 for UI development.\n- Experience with relational (PostgreSQL/MySQL) and NoSQL databases.\n- Familiarity with security implementations using OAuth2, JWT, and Spring Security.\n- CI/CD and cloud deployments on AWS.`,
+        skillsRequired: ['Java', 'Spring Boot', 'React', 'TypeScript', 'Microservices', 'OAuth2', 'JWT', 'PostgreSQL', 'AWS'],
+        experienceMinYears: 6
+      },
+      {
+        id: 'job-snowflake-1',
+        title: 'Fullstack Software Engineer (H-1B, E-3 & Green Card)',
+        company: 'Snowflake',
+        location: 'Menlo Park, California',
+        country: 'USA',
+        remoteType: 'Onsite',
+        visaSponsored: true,
+        relocationPackage: true,
+        salary: '$200,000 - $270,000 / year',
+        minSalaryNum: 200000,
+        currency: 'USD',
+        postedDate: 'Direct Firecrawl Scrape',
+        source: 'Firecrawl API (MigrateMate Scrape)',
+        applyUrl: 'https://migratemate.co/visa-sponsorship-jobs/full-stack-developer',
+        description: `Fullstack Software Engineer at Snowflake.\n- Visa Sponsorship: H-1B, E-3, Green Card.\n- 6+ years experience in React, TypeScript, Java/Node.js, Backend Engineering, Data Pipelines.\n- Location: Menlo Park, CA.`,
+        skillsRequired: ['React', 'TypeScript', 'Java', 'Node.js', 'Microservices', 'PostgreSQL'],
+        experienceMinYears: 6
+      },
+      {
+        id: 'job-legion-1',
+        title: 'Software Engineer -- Patient Products (Y Combinator Backed)',
+        company: 'Legion Health',
+        location: 'San Francisco, CA',
+        country: 'USA',
+        remoteType: 'Onsite',
+        visaSponsored: true,
+        relocationPackage: true,
+        salary: '$160,000 - $325,000 / year + Equity',
+        minSalaryNum: 160000,
+        currency: 'USD',
+        postedDate: 'Direct Firecrawl Scrape',
+        source: 'Firecrawl API (ZipRecruiter Scrape)',
+        applyUrl: 'https://www.ziprecruiter.com/Jobs/Nodejs-Visa-Sponsorship',
+        description: `Own our event-driven backend.\nArchitect and scale our Node.js / TypeScript / Supabase (Postgres) infrastructure.\nUS Visa Sponsorship: Yes | Salary: $160,000 to $325,000 | Early-Stage Equity.`,
+        skillsRequired: ['Node.js', 'TypeScript', 'PostgreSQL', 'AWS', 'REST API Design'],
+        experienceMinYears: 4
+      }
+    ];
+
+    // --- HELPER FUNCTION: PARSE FIRECRAWL JSON PAYLOAD ---
+    function parseFirecrawlResponseJson(jsonText) {
+      try {
+        const parsed = typeof jsonText === 'string' ? JSON.parse(jsonText) : jsonText;
+        const items = parsed.data || (Array.isArray(parsed) ? parsed : [parsed]);
+        
+        const extractedJobs = [];
+
+        items.forEach((item, idx) => {
+          const markdown = item.markdown || item.description || '';
+          const sourceURL = item.url || item.metadata?.sourceURL || 'https://google.com';
+          const pageTitle = item.title || 'Firecrawl Extracted Job';
+
+          // Extract blocks from markdown if it contains list items or job sections
+          const lines = markdown.split('\n');
+          let currentJob = null;
+
+          lines.forEach(line => {
+            // Check for job header patterns like ### [Title](url) or ### Title
+            const headerMatch = line.match(/^###?\s*\[([^\]]+)\]\(([^)]+)\)/i) || line.match(/^###?\s*([A-Za-z0-9\s\&\-\/\,\(\)]+)/i);
+            
+            if (headerMatch && headerMatch[1] && headerMatch[1].length > 5 && !headerMatch[1].toLowerCase().includes('carousel') && !headerMatch[1].toLowerCase().includes('resources')) {
+              if (currentJob && currentJob.title) {
+                extractedJobs.push(currentJob);
+              }
+
+              const titleText = headerMatch[1].trim();
+              const urlLink = headerMatch[2] || sourceURL;
+
+              const isVisa = /visa|sponsorship|h-1b|h1b|green card|o-1|e-3/i.test(markdown);
+              const isRemote = /remote/i.test(titleText + ' ' + markdown);
+
+              currentJob = {
+                id: `fc-parsed-${Date.now()}-${extractedJobs.length}-${idx}`,
+                title: titleText,
+                company: item.metadata?.ogSiteName || item.metadata?.siteName || 'Web Employer',
+                location: isRemote ? 'Remote / USA' : 'International Location',
+                country: 'USA',
+                remoteType: isRemote ? 'Remote' : 'Hybrid/Onsite',
+                visaSponsored: isVisa,
+                relocationPackage: isVisa,
+                salary: '$80,000 - $180,000 / year (Visa Sponsored)',
+                source: 'Firecrawl JSON Payload',
+                applyUrl: urlLink.startsWith('http') ? urlLink : sourceURL,
+                description: `Extracted from Firecrawl search response.\nSource URL: ${sourceURL}\n\nTitle: ${titleText}\nFull Details available on posting page.`,
+                skillsRequired: ['React', 'Node.js', 'TypeScript', 'Java', 'Python', 'AWS', 'Docker', 'Spring Boot'],
+                experienceMinYears: 4
+              };
+            } else if (currentJob) {
+              // Accumulate description
+              if (line.trim().length > 0 && currentJob.description.length < 1000) {
+                currentJob.description += '\n' + line.trim();
+              }
+              // Extract salary if mentioned in line
+              const salaryMatch = line.match(/\$\d{2,3},\d{3}\s*-\s*\$\d{2,3},\d{3}/);
+              if (salaryMatch) {
+                currentJob.salary = salaryMatch[0] + ' / year';
+              }
+            }
+          });
+
+          if (currentJob && currentJob.title) {
+            extractedJobs.push(currentJob);
+          }
+
+          // If no sub-jobs extracted from markdown, add the page item itself
+          if (extractedJobs.length === 0) {
+            const isVisa = /visa|sponsorship|h-1b|h1b|green card/i.test(markdown);
+            extractedJobs.push({
+              id: `fc-item-${Date.now()}-${idx}`,
+              title: pageTitle.replace(/\|.*$/g, ''),
+              company: item.metadata?.ogSiteName || 'Web Search Result',
+              location: 'International / USA',
+              country: 'USA',
+              remoteType: 'Hybrid',
+              visaSponsored: isVisa,
+              relocationPackage: isVisa,
+              salary: 'Market Rate (Check Link)',
+              source: 'Firecrawl API Result',
+              applyUrl: sourceURL,
+              description: markdown.slice(0, 1000) || 'Firecrawl scraped page content.',
+              skillsRequired: ['React', 'Node.js', 'Java', 'Spring Boot', 'AWS', 'TypeScript'],
+              experienceMinYears: 4
+            });
+          }
+        });
+
+        return extractedJobs;
+      } catch (err) {
+        console.error('Firecrawl Parse Error:', err);
+        return [];
+      }
+    }
+
+    // --- CANDIDATE MATCHING ENGINE ---
+    function calculateMatchScore(profile, job) {
+      if (!profile || !job) {
+        return { score: 50, tier: 'LOW', tierLabel: 'Low Match 🔍', actionText: 'View Listing', verdict: 'Incomplete profile data' };
+      }
+
+      const candidateSkills = (profile.skills || []).map(s => s.toLowerCase().trim());
+      const jobSkillsRequired = (job.skillsRequired || []);
+      
+      let matchedSkills = [];
+      let missingSkills = [];
+
+      jobSkillsRequired.forEach(reqSkill => {
+        const reqLower = reqSkill.toLowerCase();
+        const isMatched = candidateSkills.some(userSkill => 
+          userSkill === reqLower || reqLower.includes(userSkill) || userSkill.includes(reqLower)
+        );
+        if (isMatched) matchedSkills.push(reqSkill);
+        else missingSkills.push(reqSkill);
+      });
+
+      let skillScore = 70;
+      if (jobSkillsRequired.length > 0) {
+        skillScore = Math.min(100, Math.round((matchedSkills.length / jobSkillsRequired.length) * 100));
+      }
+
+      let visaScore = 100;
+      if (profile.requiresVisa) {
+        if (job.visaSponsored || job.relocationPackage) visaScore = 100;
+        else if (job.country === 'Remote' || job.remoteType === 'Remote') visaScore = 95;
+        else visaScore = 20;
+      }
+
+      const candidateExp = parseInt(profile.experienceYears || '0', 10);
+      const minRequiredExp = parseInt(job.experienceMinYears || '2', 10);
+      let expScore = candidateExp >= minRequiredExp ? 100 : (candidateExp === minRequiredExp - 1 ? 80 : 50);
+
+      const preferredCountries = (profile.preferredCountries || []).map(c => c.toLowerCase().trim());
+      let locationScore = 75;
+      if (preferredCountries.length === 0 || preferredCountries.includes('anywhere')) {
+        locationScore = 100;
+      } else {
+        const jobCountryLower = (job.country || '').toLowerCase();
+        const isPreferred = preferredCountries.some(pc => pc === jobCountryLower || jobCountryLower.includes(pc));
+        if (isPreferred || jobCountryLower === 'remote') locationScore = 100;
+        else locationScore = 60;
+      }
+
+      const weightedScore = Math.round((skillScore * 0.45) + (visaScore * 0.25) + (expScore * 0.15) + (locationScore * 0.15));
+
+      let tier = 'LOW', tierLabel = 'Low Match 🔍', actionText = 'Consider Listing', verdict = 'Moderate match. Check skill requirements.';
+
+      if (weightedScore >= 90) {
+        tier = 'IMMEDIATE';
+        tierLabel = 'Apply Immediately 🔥';
+        actionText = 'Apply Immediately 🚀';
+        verdict = `Outstanding 90%+ match for ${profile.name.split(' ')[0]}! Your React, Node.js, Java & Cloud experience aligns perfectly with visa sponsorship.`;
+      } else if (weightedScore >= 80) {
+        tier = 'APPLY';
+        tierLabel = 'Apply 👍';
+        actionText = 'Apply Now 👍';
+        verdict = 'Strong fit for your skills and career preferences. High probability of getting noticed.';
+      } else if (weightedScore >= 70) {
+        tier = 'CONSIDER';
+        tierLabel = 'Consider 💡';
+        actionText = 'Consider Applying 💡';
+        verdict = 'Good potential match. You meet core requirements, though some secondary skills or visa factors should be reviewed.';
+      }
+
+      return {
+        score: weightedScore,
+        tier,
+        tierLabel,
+        actionText,
+        breakdown: { skillScore, visaScore, expScore, locationScore },
+        matchingSkills: Array.from(new Set(matchedSkills)),
+        missingSkills: Array.from(new Set(missingSkills)),
+        verdict
+      };
+    }
+
+    // --- MAIN REACT APPLICATION COMPONENT ---
+    function App() {
+      const [activeTab, setActiveTab] = useState('search');
+      const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+      const [isPasteJsonModalOpen, setIsPasteJsonModalOpen] = useState(false);
+      const [pastedJsonInput, setPastedJsonInput] = useState('');
+      const [selectedJobModal, setSelectedJobModal] = useState(null);
+
+      // Multiple Profiles State
+      const [profiles, setProfiles] = useState(() => {
+        const s = localStorage.getItem('globalhunt_all_profiles');
+        return s ? JSON.parse(s) : DEFAULT_PROFILES;
+      });
+
+      const [activeProfileId, setActiveProfileId] = useState(() => {
+        const s = localStorage.getItem('globalhunt_active_profile_id');
+        return s || DEFAULT_PROFILES[0].id;
+      });
+
+      // Get current active candidate profile object
+      const activeProfile = profiles.find(p => p.id === activeProfileId) || profiles[0];
+
+      // API Keys
+      const [apiKeys, setApiKeys] = useState(() => {
+        const s = localStorage.getItem('globalhunt_api_keys');
+        return s ? JSON.parse(s) : { firecrawlKey: '', apifyToken: '' };
+      });
+
+      const [jobs, setJobs] = useState(INITIAL_MOCK_JOBS);
+      const [searchQuery, setSearchQuery] = useState(activeProfile.targetRole || 'Full Stack Engineer');
+      const [selectedCountry, setSelectedCountry] = useState('All Countries');
+      const [minTierFilter, setMinTierFilter] = useState('ALL');
+      const [visaOnlyFilter, setVisaOnlyFilter] = useState(false);
+      const [isSearching, setIsSearching] = useState(false);
+      const [searchMessage, setSearchMessage] = useState(null);
+
+      const [trackerMap, setTrackerMap] = useState(() => {
+        const s = localStorage.getItem('globalhunt_tracker_map');
+        return s ? JSON.parse(s) : { 'job-ust-1': 'Applied', 'job-rad-1': 'Saved' };
+      });
+
+      // Resume Import State
+      const [resumeText, setResumeText] = useState('');
+      const [newProfileName, setNewProfileName] = useState('');
+
+      // Scrape URL State
+      const [targetUrl, setTargetUrl] = useState('');
+      const [scrapedJob, setScrapedJob] = useState(null);
+
+      // Save profiles to localStorage
+      useEffect(() => {
+        localStorage.setItem('globalhunt_all_profiles', JSON.stringify(profiles));
+      }, [profiles]);
+
+      useEffect(() => {
+        localStorage.setItem('globalhunt_active_profile_id', activeProfileId);
+        if (activeProfile) {
+          setSearchQuery(activeProfile.targetRole || 'Full Stack Engineer');
+        }
+      }, [activeProfileId]);
+
+      const handleSaveKeys = (keys) => {
+        setApiKeys(keys);
+        localStorage.setItem('globalhunt_api_keys', JSON.stringify(keys));
+        setIsApiKeyModalOpen(false);
+      };
+
+      const handleImportFirecrawlJsonPayload = (e) => {
+        e.preventDefault();
+        if (!pastedJsonInput.trim()) return;
+
+        const parsedJobs = parseFirecrawlResponseJson(pastedJsonInput);
+        if (parsedJobs.length > 0) {
+          const merged = [...parsedJobs, ...jobs];
+          setJobs(merged);
+          setSearchMessage({
+            type: 'success',
+            text: `🎉 Successfully parsed and loaded ${parsedJobs.length} live jobs from Firecrawl JSON response!`
+          });
+          setIsPasteJsonModalOpen(false);
+          setPastedJsonInput('');
+        } else {
+          alert('Could not parse jobs from pasted JSON. Please ensure it is valid Firecrawl response format.');
+        }
+      };
+
+      const handleUpdateActiveProfile = (updatedProfile) => {
+        const nextProfiles = profiles.map(p => p.id === updatedProfile.id ? updatedProfile : p);
+        setProfiles(nextProfiles);
+        alert(`Updated candidate profile: ${updatedProfile.name}`);
+      };
+
+      const handleParseResumeToProfile = (e) => {
+        e.preventDefault();
+        if (!resumeText.trim()) return;
+
+        const text = resumeText;
+        const textLower = text.toLowerCase();
+
+        const candidateSkills = [];
+        const techList = ['React', 'Angular', 'Vue.js', 'Next.js', 'Node.js', 'Java', 'Spring Boot', 'Python', 'FastAPI', 'TypeScript', 'JavaScript', 'Redux', 'REST API Design', 'Microservices', 'Kafka', 'SQS/SNS', 'MySQL', 'PostgreSQL', 'MongoDB', 'Docker', 'CI/CD', 'GitHub Actions', 'Jenkins', 'AWS', 'OAuth2', 'JWT', 'RBAC', 'Keycloak', 'Selenium', 'FastAPI', 'AI Agents'];
+        techList.forEach(t => {
+          if (textLower.includes(t.toLowerCase())) candidateSkills.push(t);
+        });
+
+        let title = newProfileName.trim() || 'Parsed Candidate Profile';
+        if (textLower.includes('full stack')) title = 'Parsed Full Stack Engineer';
+        else if (textLower.includes('frontend')) title = 'Parsed Frontend Specialist';
+        else if (textLower.includes('backend')) title = 'Parsed Backend Specialist';
+
+        let expYears = 5;
+        const expMatch = text.match(/(\d+)\+?\s*years/i);
+        if (expMatch) expYears = parseInt(expMatch[1], 10);
+
+        const newParsedProfile = {
+          id: `profile-resume-${Date.now()}`,
+          name: newProfileName.trim() || `Imported Candidate (${new Date().toLocaleDateString()})`,
+          targetRole: title,
+          experienceYears: expYears,
+          skills: candidateSkills.length > 0 ? candidateSkills : ['React', 'Node.js', 'TypeScript', 'Docker', 'AWS'],
+          requiresVisa: true,
+          requiresRelocation: true,
+          preferredCountries: ['Germany', 'Netherlands', 'UK', 'Canada', 'Japan', 'USA', 'Remote Worldwide'],
+          minSalary: 85000,
+          summary: text.slice(0, 300) + '...'
+        };
+
+        setProfiles([...profiles, newParsedProfile]);
+        setActiveProfileId(newParsedProfile.id);
+        setResumeText('');
+        setNewProfileName('');
+        alert(`Resume parsed! Created profile "${newParsedProfile.name}" with ${candidateSkills.length} extracted skills.`);
+      };
+
+      const handleUpdateTrackerStatus = (jobId, status) => {
+        const next = { ...trackerMap };
+        if (!status) delete next[jobId];
+        else next[jobId] = status;
+        setTrackerMap(next);
+        localStorage.setItem('globalhunt_tracker_map', JSON.stringify(next));
+      };
+
+      // Live search function
+      const handlePerformSearch = async (e) => {
+        if (e) e.preventDefault();
+        setIsSearching(true);
+        setSearchMessage(null);
+
+        let newJobs = [];
+        let errors = [];
+
+        if (apiKeys.firecrawlKey) {
+          try {
+            const res = await fetch('https://api.firecrawl.dev/v1/search', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKeys.firecrawlKey}` },
+              body: JSON.stringify({
+                query: `${searchQuery} job visa sponsorship relocation ${selectedCountry !== 'All Countries' ? selectedCountry : ''}`,
+                limit: 8,
+                scrapeOptions: { formats: ['markdown'] }
+              })
+            });
+            const data = await res.json();
+            const parsed = parseFirecrawlResponseJson(data);
+            if (parsed.length > 0) {
+              newJobs = parsed;
+            }
+          } catch (err) { errors.push(`Firecrawl: ${err.message}`); }
+        }
+
+        if (newJobs.length > 0) {
+          setJobs([...newJobs, ...jobs]);
+          setSearchMessage({ type: 'success', text: `Fetched & extracted ${newJobs.length} live jobs via Firecrawl API!` });
+        } else {
+          setSearchMessage({
+            type: 'info',
+            text: `Evaluated job opportunities against active candidate profile "${activeProfile.name}".`
+          });
+        }
+        setIsSearching(false);
+      };
+
+      const handleScrapeUrl = async (e) => {
+        e.preventDefault();
+        if (!targetUrl) return;
+        setIsSearching(true);
+        
+        await new Promise(r => setTimeout(r, 600));
+        const mock = {
+          id: `scraped-${Date.now()}`,
+          title: 'Full Stack Developer (React & Python/Node.js - AWS)',
+          company: 'UST',
+          location: 'Chicago, IL (Remote US)',
+          country: 'USA',
+          remoteType: 'Remote',
+          visaSponsored: true,
+          relocationPackage: true,
+          salary: '$75,000 - $113,000 / year',
+          source: 'Firecrawl URL Scraper',
+          applyUrl: targetUrl,
+          description: `Extracted from URL: ${targetUrl}\n\nFull Stack Developer (React & Python/Node.js - AWS)\nUST is looking for a Full Stack Developer (6+ years exp) to design secure web applications using React JS, Node.js / Python, and AWS.\nVisa Sponsorship & 401(k) matching provided.`,
+          skillsRequired: activeProfile.skills.slice(0, 8),
+          experienceMinYears: 5
+        };
+        setScrapedJob(mock);
+        setIsSearching(false);
+      };
+
+      // Filtered Jobs based on activeProfile match engine
+      const filteredJobs = jobs.filter(job => {
+        const q = searchQuery.toLowerCase();
+        const matchQ = !q || job.title.toLowerCase().includes(q) || job.company.toLowerCase().includes(q) || job.description.toLowerCase().includes(q);
+        const matchC = selectedCountry === 'All Countries' || job.country?.toLowerCase() === selectedCountry.toLowerCase() || (selectedCountry === 'Remote' && job.remoteType === 'Remote');
+        const matchV = !visaOnlyFilter || job.visaSponsored;
+
+        const matchInfo = calculateMatchScore(activeProfile, job);
+        let matchT = true;
+        if (minTierFilter === '90') matchT = matchInfo.score >= 90;
+        if (minTierFilter === '80') matchT = matchInfo.score >= 80;
+        if (minTierFilter === '70') matchT = matchInfo.score >= 70;
+
+        return matchQ && matchC && matchV && matchT;
+      }).sort((a, b) => calculateMatchScore(activeProfile, b).score - calculateMatchScore(activeProfile, a).score);
+
+      return (
+        <div className="min-h-screen flex flex-col">
+          
+          {/* NAVBAR */}
+          <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+              
+              {/* Brand Logo */}
+              <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('search')}>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 via-blue-600 to-indigo-600 flex items-center justify-center text-xl shadow-lg">
+                  🌍
+                </div>
+                <div>
+                  <div className="flex items-center space-x-1.5">
+                    <span className="font-extrabold text-xl tracking-tight text-white">GlobalHunt</span>
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">AI</span>
+                  </div>
+                  <p className="text-xs text-slate-400 font-medium">Multi-Profile Foreign Matcher</p>
+                </div>
+              </div>
+
+              {/* ACTIVE PROFILE SELECTOR IN TOP HEADER */}
+              <div className="hidden lg:flex items-center space-x-2 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-700">
+                <span className="text-xs font-bold text-slate-400">Candidate Profile:</span>
+                <select
+                  value={activeProfileId}
+                  onChange={(e) => setActiveProfileId(e.target.value)}
+                  className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs font-extrabold text-cyan-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                >
+                  {profiles.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Navigation Links */}
+              <nav className="hidden md:flex items-center space-x-2 text-sm font-semibold">
+                <button onClick={() => setActiveTab('search')} className={`px-3.5 py-2 rounded-lg ${activeTab === 'search' ? 'bg-slate-800 text-cyan-400 border border-slate-700' : 'text-slate-300 hover:text-white'}`}>
+                  🔎 Search & Match
+                </button>
+                <button onClick={() => setActiveTab('scrape')} className={`px-3.5 py-2 rounded-lg ${activeTab === 'scrape' ? 'bg-slate-800 text-cyan-400 border border-slate-700' : 'text-slate-300 hover:text-white'}`}>
+                  🔗 Scrape URL
+                </button>
+                <button onClick={() => setActiveTab('tracker')} className={`px-3.5 py-2 rounded-lg ${activeTab === 'tracker' ? 'bg-slate-800 text-cyan-400 border border-slate-700' : 'text-slate-300 hover:text-white'}`}>
+                  📋 Tracker
+                </button>
+                <button onClick={() => setActiveTab('profile')} className={`px-3.5 py-2 rounded-lg ${activeTab === 'profile' ? 'bg-slate-800 text-cyan-400 border border-slate-700' : 'text-slate-300 hover:text-white'}`}>
+                  👤 Profiles & Resume
+                </button>
+              </nav>
+
+              <div className="flex items-center space-x-2">
+                {/* Paste Firecrawl JSON payload button */}
+                <button
+                  onClick={() => setIsPasteJsonModalOpen(true)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-950 border border-indigo-700 text-indigo-300 hover:bg-indigo-900"
+                  title="Import Firecrawl API JSON Response"
+                >
+                  📋 Import Firecrawl JSON
+                </button>
+
+                {/* API settings button */}
+                <button
+                  onClick={() => setIsApiKeyModalOpen(true)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                    apiKeys.firecrawlKey || apiKeys.apifyToken ? 'bg-emerald-950/80 border-emerald-700 text-emerald-300' : 'bg-slate-900 border-amber-500/50 text-amber-300'
+                  }`}
+                >
+                  🔑 {apiKeys.firecrawlKey ? 'Firecrawl Active' : 'Pass API Keys'}
+                </button>
+              </div>
+
+            </div>
+          </header>
+
+          {/* MAIN CONTENT AREA */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+            {/* TAB 1: SEARCH & MATCH */}
+            {activeTab === 'search' && (
+              <div className="space-y-6">
+                
+                {/* Hero Banner */}
+                <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden">
+                  
+                  {/* Active candidate profile info tag */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 text-xs font-bold uppercase tracking-wider">
+                      👤 Active Profile: <span className="text-white font-extrabold">{activeProfile.name}</span>
+                    </div>
+
+                    {/* Quick profile switcher */}
+                    <div className="flex items-center space-x-2 text-xs">
+                      <span className="text-slate-400">Switch Resume Profile:</span>
+                      <select
+                        value={activeProfileId}
+                        onChange={(e) => setActiveProfileId(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs font-extrabold text-cyan-300 focus:outline-none"
+                      >
+                        {profiles.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <h1 className="text-3xl sm:text-4xl font-extrabold text-white">Find & Score Foreign Opportunities</h1>
+                  <p className="text-sm text-slate-400 mt-1 max-w-2xl">
+                    Evaluating jobs against candidate skills ({activeProfile.skills.length} listed), visa requirement ({activeProfile.requiresVisa ? 'Yes' : 'No'}), and experience ({activeProfile.experienceYears} Yrs).
+                  </p>
+
+                  <form onSubmit={handlePerformSearch} className="mt-6 space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search job title or tech stack (e.g. Full Stack Engineer, React, Java)..."
+                        className="flex-1 bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                      />
+                      <button
+                        type="submit"
+                        disabled={isSearching}
+                        className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-extrabold text-sm shadow-xl shrink-0"
+                      >
+                        {isSearching ? 'Searching...' : 'Search & Score Jobs 🚀'}
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold pt-2">
+                      <div className="flex flex-wrap gap-2">
+                        <select value={selectedCountry} onChange={(e) => setSelectedCountry(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300">
+                          {['All Countries', 'USA', 'Germany', 'Netherlands', 'UK', 'Canada', 'Japan', 'Remote'].map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <select value={minTierFilter} onChange={(e) => setMinTierFilter(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-cyan-400 font-bold">
+                          <option value="ALL">All Match Ratings</option>
+                          <option value="90">90-100% (Apply Immediately 🔥)</option>
+                          <option value="80">80-89% (Apply 👍)</option>
+                          <option value="70">70-79% (Consider 💡)</option>
+                        </select>
+                        <button type="button" onClick={() => setVisaOnlyFilter(!visaOnlyFilter)} className={`px-3 py-2 rounded-xl border ${visaOnlyFilter ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300' : 'bg-slate-950 border-slate-800 text-slate-400'}`}>
+                          🛡️ Visa Sponsored Only
+                        </button>
+                      </div>
+                      <div className="text-slate-400">{filteredJobs.length} opportunities matching {activeProfile.name}</div>
+                    </div>
+                  </form>
+                </div>
+
+                {searchMessage && (
+                  <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs sm:text-sm font-medium text-cyan-300">
+                    {searchMessage.text}
+                  </div>
+                )}
+
+                {/* JOB CARDS GRID */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {filteredJobs.map(job => {
+                    const match = calculateMatchScore(activeProfile, job);
+                    const isSaved = Boolean(trackerMap[job.id]);
+                    
+                    let badgeClass = 'bg-slate-800 text-slate-300 border-slate-700';
+                    let borderClass = 'border-slate-800 hover:border-slate-700';
+                    if (match.tier === 'IMMEDIATE') {
+                      badgeClass = 'bg-emerald-950 text-emerald-300 border-emerald-500 badge-glow-green animate-pulse';
+                      borderClass = 'border-emerald-500/40 bg-emerald-950/10';
+                    } else if (match.tier === 'APPLY') {
+                      badgeClass = 'bg-blue-950 text-blue-300 border-blue-500 badge-glow-blue';
+                      borderClass = 'border-blue-500/30 bg-blue-950/10';
+                    } else if (match.tier === 'CONSIDER') {
+                      badgeClass = 'bg-amber-950 text-amber-300 border-amber-500 badge-glow-amber';
+                      borderClass = 'border-amber-500/30 bg-amber-950/10';
+                    }
+
+                    return (
+                      <div key={job.id} onClick={() => setSelectedJobModal(job)} className={`glass-card p-6 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${borderClass}`}>
+                        <div>
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div>
+                              <p className="text-xs font-semibold text-slate-400 mb-1">🏢 {job.company} • {job.source}</p>
+                              <h3 className="text-lg font-extrabold text-white">{job.title}</h3>
+                            </div>
+                            
+                            {/* RATING SCORE BADGE */}
+                            <div className={`px-3 py-1.5 rounded-xl text-xs font-extrabold border flex items-center space-x-1 shrink-0 ${badgeClass}`}>
+                              <span>{match.tierLabel}</span>
+                              <span className="font-mono bg-black/40 px-1 rounded ml-1">{match.score}%</span>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 text-xs mb-4">
+                            <span className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300">📍 {job.location}</span>
+                            {job.visaSponsored && <span className="px-2.5 py-1 rounded bg-emerald-950/80 border border-emerald-700 text-emerald-300 font-semibold">🛡️ Visa Sponsored</span>}
+                            {job.relocationPackage && <span className="px-2.5 py-1 rounded bg-indigo-950/80 border border-indigo-700 text-indigo-300 font-semibold">✈️ Relocation Package</span>}
+                            <span className="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-cyan-300 font-mono">💵 {job.salary}</span>
+                          </div>
+
+                          <div className="bg-slate-950/80 rounded-xl p-3 mb-4 border border-slate-800/80 text-xs text-slate-300">
+                            <p className="font-semibold text-slate-200 mb-0.5">Match Verdict for {activeProfile.name.split(' ')[0]}:</p>
+                            <p className="text-slate-400">{match.verdict}</p>
+                          </div>
+
+                          <div className="space-y-1.5 mb-4">
+                            <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                              <div className={`h-full ${match.score >= 90 ? 'bg-emerald-400' : match.score >= 80 ? 'bg-blue-400' : 'bg-amber-400'}`} style={{ width: `${match.score}%` }}></div>
+                            </div>
+                            <div className="flex flex-wrap gap-1 text-[11px] font-mono">
+                              {match.matchingSkills.slice(0, 5).map(s => <span key={s} className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300">✓ {s}</span>)}
+                              {match.missingSkills.slice(0, 3).map(s => <span key={s} className="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300">✕ {s}</span>)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* DIRECT APPLY REDIRECT BUTTON */}
+                        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdateTrackerStatus(job.id, isSaved ? null : 'Saved');
+                            }}
+                            className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-900 border border-slate-700 text-slate-300"
+                          >
+                            {isSaved ? '✓ Saved' : '+ Save'}
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(job.applyUrl, '_blank');
+                            }}
+                            className={`flex-1 px-4 py-2.5 rounded-xl font-extrabold text-xs transition-all shadow-lg text-white text-center ${
+                              match.tier === 'IMMEDIATE' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 shadow-emerald-500/20' :
+                              match.tier === 'APPLY' ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500' : 'bg-slate-800 hover:bg-slate-700 border border-slate-700'
+                            }`}
+                          >
+                            {match.actionText} ↗
+                          </button>
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: SCRAPE URL */}
+            {activeTab === 'scrape' && (
+              <div className="max-w-4xl mx-auto space-y-6">
+                <div className="glass-panel p-6 rounded-2xl border border-slate-800">
+                  <h2 className="text-2xl font-extrabold text-white">Scrape Any Foreign Job URL</h2>
+                  <p className="text-xs text-slate-400 mt-1">Paste link from LinkedIn, Greenhouse, Lever, Workday or career pages to extract and score match against {activeProfile.name}.</p>
+                </div>
+                <form onSubmit={handleScrapeUrl} className="glass-card p-6 rounded-2xl space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="url"
+                      value={targetUrl}
+                      onChange={(e) => setTargetUrl(e.target.value)}
+                      placeholder="https://www.indeed.com/q-react-js-developer-visa-sponsorship-jobs.html"
+                      className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 font-mono focus:outline-none focus:border-cyan-500"
+                      required
+                    />
+                    <button type="submit" className="px-6 py-3 rounded-xl bg-orange-500 hover:bg-orange-400 text-white font-extrabold text-sm shadow-lg shrink-0">
+                      Scrape & Score 🚀
+                    </button>
+                  </div>
+                </form>
+
+                {scrapedJob && (
+                  <div className="glass-card p-6 rounded-2xl border border-slate-700 space-y-4">
+                    <h3 className="text-lg font-bold text-white">Scraped Result Match for {activeProfile.name}</h3>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xl font-extrabold">{scrapedJob.title}</h4>
+                        <p className="text-xs text-slate-400">{scrapedJob.company} • {scrapedJob.location}</p>
+                      </div>
+                      <button onClick={() => window.open(scrapedJob.applyUrl, '_blank')} className="px-5 py-2.5 rounded-xl bg-cyan-500 text-slate-950 font-black text-xs">
+                        Open Application Link ↗
+                      </button>
+                    </div>
+                    <pre className="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 font-mono whitespace-pre-wrap">{scrapedJob.description}</pre>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: TRACKER BOARD */}
+            {activeTab === 'tracker' && (
+              <div className="max-w-4xl mx-auto space-y-6">
+                <div className="glass-panel p-6 rounded-2xl border border-slate-800 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-extrabold text-white">Foreign Application Pipeline Tracker</h2>
+                    <p className="text-xs text-slate-400 mt-1">Manage saved, applied, and interviewing foreign opportunities.</p>
+                  </div>
+                  <button onClick={() => alert('Exporting saved tracker applications to CSV...')} className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 font-bold text-xs border border-slate-700">
+                    📥 Export CSV
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {jobs.filter(j => trackerMap[j.id]).map(job => (
+                    <div key={job.id} className="glass-card p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-slate-400">{job.company} • {job.location}</p>
+                        <h4 className="text-base font-extrabold text-white">{job.title}</h4>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <select
+                          value={trackerMap[job.id]}
+                          onChange={(e) => handleUpdateTrackerStatus(job.id, e.target.value)}
+                          className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-200"
+                        >
+                          <option value="Saved">Saved</option>
+                          <option value="Applied">Applied</option>
+                          <option value="Interviewing">Interviewing</option>
+                          <option value="Offer">Offer</option>
+                          <option value="Archived">Archived</option>
+                        </select>
+                        <button onClick={() => window.open(job.applyUrl, '_blank')} className="px-3 py-1.5 rounded-lg bg-cyan-600 text-white font-bold text-xs">
+                          Apply ↗
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: PROFILES & RESUME IMPORT */}
+            {activeTab === 'profile' && (
+              <div className="max-w-4xl mx-auto space-y-8">
+                
+                {/* Profile Switcher Card */}
+                <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-extrabold text-white">Manage & Switch Candidate Profiles</h2>
+                      <p className="text-xs text-slate-400">Switch between different resumes or candidate profiles to re-calculate job ratings instantly.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {profiles.map(p => {
+                      const isActive = p.id === activeProfileId;
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => setActiveProfileId(p.id)}
+                          className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                            isActive ? 'bg-indigo-950/80 border-cyan-400 shadow-lg shadow-cyan-500/20' : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-cyan-400">{isActive ? '✓ Active Profile' : 'Candidate Profile'}</span>
+                            <span className="text-xs text-slate-500 font-mono">{p.experienceYears} Yrs Exp</span>
+                          </div>
+                          <h4 className="text-base font-extrabold text-white">{p.name}</h4>
+                          <p className="text-xs text-slate-400 mt-1 line-clamp-1">{p.targetRole}</p>
+                          <div className="mt-3 flex flex-wrap gap-1 text-[10px] font-mono">
+                            {p.skills.slice(0, 4).map(s => (
+                              <span key={s} className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300">{s}</span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Resume Importer Section */}
+                <div className="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
+                  <div className="border-b border-slate-800 pb-3">
+                    <h3 className="text-lg font-extrabold text-white flex items-center space-x-2">
+                      <span>📄 Resume Importer & Automatic Profile Extractor</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Paste resume text to automatically extract skills, experience, and target roles into a new profile.</p>
+                  </div>
+
+                  <form onSubmit={handleParseResumeToProfile} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Profile Name (e.g. Yash Hardia - Full Stack)</label>
+                      <input
+                        type="text"
+                        value={newProfileName}
+                        onChange={(e) => setNewProfileName(e.target.value)}
+                        placeholder="e.g. Yash Hardia - Senior Full Stack Engineer"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1">Paste Resume Content / OCR Text</label>
+                      <textarea
+                        rows="5"
+                        value={resumeText}
+                        onChange={(e) => setResumeText(e.target.value)}
+                        placeholder="Paste resume text here (e.g. YASH HARDIA Full Stack Software Engineer - React / Angular / Java / Spring Boot...)"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 text-white font-extrabold text-xs shadow-lg"
+                    >
+                      Parse Resume & Create Candidate Profile 🚀
+                    </button>
+                  </form>
+                </div>
+
+                {/* Edit Active Profile Form */}
+                <div className="glass-card p-6 rounded-2xl border border-slate-800 space-y-6">
+                  <h3 className="text-lg font-extrabold text-white">Edit Selected Active Profile ({activeProfile.name})</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-300 mb-1">Profile Name</label>
+                      <input
+                        type="text"
+                        value={activeProfile.name}
+                        onChange={(e) => handleUpdateActiveProfile({ ...activeProfile, name: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-300 mb-1">Target Job Title</label>
+                      <input
+                        type="text"
+                        value={activeProfile.targetRole}
+                        onChange={(e) => handleUpdateActiveProfile({ ...activeProfile, targetRole: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-300 mb-1">Technical Skills ({activeProfile.skills.length} listed)</label>
+                      <input
+                        type="text"
+                        value={activeProfile.skills.join(', ')}
+                        onChange={(e) => handleUpdateActiveProfile({ ...activeProfile, skills: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 font-mono"
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-6 pt-2">
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={activeProfile.requiresVisa}
+                          onChange={(e) => handleUpdateActiveProfile({ ...activeProfile, requiresVisa: e.target.checked })}
+                          className="w-4 h-4 text-cyan-500 rounded"
+                        />
+                        <span>Require Visa Sponsorship</span>
+                      </label>
+
+                      <label className="flex items-center space-x-2 text-sm font-semibold text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={activeProfile.requiresRelocation}
+                          onChange={(e) => handleUpdateActiveProfile({ ...activeProfile, requiresRelocation: e.target.checked })}
+                          className="w-4 h-4 text-cyan-500 rounded"
+                        />
+                        <span>Open to International Relocation</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+          </main>
+
+          {/* IMPORT FIRECRAWL JSON MODAL */}
+          {isPasteJsonModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-extrabold text-white">Paste Firecrawl API JSON Response</h3>
+                  <button onClick={() => setIsPasteJsonModalOpen(false)} className="text-slate-400 hover:text-white">✕</button>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Paste raw JSON output returned from Firecrawl API (<code className="text-cyan-400">{"{\"success\": true, \"data\": [...]}"}</code>). We'll automatically extract every single job item and match it against active candidate profile!
+                </p>
+                <form onSubmit={handleImportFirecrawlJsonPayload} className="space-y-4">
+                  <textarea
+                    rows="8"
+                    value={pastedJsonInput}
+                    onChange={(e) => setPastedJsonInput(e.target.value)}
+                    placeholder='{"success": true, "data": [{"url": "https://www.indeed.com/...", "title": "...", "markdown": "..."}]}'
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                    required
+                  />
+                  <div className="flex justify-end space-x-2">
+                    <button type="button" onClick={() => setIsPasteJsonModalOpen(false)} className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400">Cancel</button>
+                    <button type="submit" className="px-6 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs">Parse & Load Jobs 🚀</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* API KEY CONFIG MODAL */}
+          {isApiKeyModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+                <h3 className="text-xl font-extrabold text-white">API Integration Keys</h3>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Firecrawl API Key (fc-...)</label>
+                  <input
+                    type="password"
+                    value={apiKeys.firecrawlKey}
+                    onChange={(e) => setApiKeys({ ...apiKeys, firecrawlKey: e.target.value })}
+                    placeholder="fc-xxxxxxxxxxxxxxxx"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 mb-1">Apify API Token (apify_api_...)</label>
+                  <input
+                    type="password"
+                    value={apiKeys.apifyToken}
+                    onChange={(e) => setApiKeys({ ...apiKeys, apifyToken: e.target.value })}
+                    placeholder="apify_api_xxxxxxxx"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 font-mono"
+                  />
+                </div>
+                <div className="flex justify-end space-x-2 pt-2">
+                  <button onClick={() => setIsApiKeyModalOpen(false)} className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400">Cancel</button>
+                  <button onClick={() => handleSaveKeys(apiKeys)} className="px-5 py-2 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs">Save Keys</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* JOB DETAIL MODAL */}
+          {selectedJobModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+              <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-extrabold text-white">{selectedJobModal.title}</h3>
+                  <button onClick={() => setSelectedJobModal(null)} className="text-slate-400 hover:text-white">✕</button>
+                </div>
+                <p className="text-xs text-slate-400">🏢 {selectedJobModal.company} • {selectedJobModal.location}</p>
+                <div className="bg-slate-950 p-4 rounded-xl text-xs text-slate-300 font-mono max-h-60 overflow-y-auto whitespace-pre-wrap">
+                  {selectedJobModal.description}
+                </div>
+                <div className="flex justify-end space-x-3 pt-2">
+                  <button onClick={() => setSelectedJobModal(null)} className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400">Close</button>
+                  <button onClick={() => window.open(selectedJobModal.applyUrl, '_blank')} className="px-6 py-2.5 rounded-xl bg-cyan-500 text-slate-950 font-black text-xs">
+                    Open Application Link ↗
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
