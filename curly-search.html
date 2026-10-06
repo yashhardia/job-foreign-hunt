@@ -130,11 +130,14 @@
         setIsLoading(true);
 
         try {
-          // Calling local server proxy endpoint /api/curly-search (CORS-free!)
+          const storedKeys = JSON.parse(localStorage.getItem('globalhunt_api_keys') || '{}');
+          const apifyToken = storedKeys.apifyToken || '';
+
+          // Calling local server proxy endpoint /api/curly-search which proxies live to Curly API
           const res = await fetch('/api/curly-search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query, country, recency })
+            body: JSON.stringify({ query, country, recency, apifyToken })
           });
 
           if (res.ok) {
