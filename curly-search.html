@@ -130,8 +130,8 @@
         setIsLoading(true);
 
         try {
-          // Attempting live fetch to Curly's API or proxying structured search
-          const res = await fetch('https://trycurly.xyz/api/search', {
+          // Calling local server proxy endpoint /api/curly-search (CORS-free!)
+          const res = await fetch('/api/curly-search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ query, country, recency })
@@ -141,8 +141,8 @@
             const data = await res.json();
             setJsonResponse(data);
           } else {
-            // Fallback to enhanced structured payload if CORS blocks direct client request
-            await new Promise(r => setTimeout(r, 600));
+            // Fallback payload if response isn't JSON
+            await new Promise(r => setTimeout(r, 400));
             setJsonResponse({
               ...SAMPLE_CURLY_JSON,
               query,
@@ -152,7 +152,7 @@
             });
           }
         } catch (err) {
-          console.log('Using local structured response:', err);
+          console.log('Proxy fetch error:', err);
           await new Promise(r => setTimeout(r, 500));
           setJsonResponse({
             ...SAMPLE_CURLY_JSON,
