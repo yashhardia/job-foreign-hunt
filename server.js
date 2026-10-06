@@ -17,7 +17,8 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  let filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
+  let requestedFile = req.url === '/' ? 'index.html' : req.url.replace(/^\//, '');
+  let filePath = path.join(__dirname, requestedFile);
 
   fs.exists(filePath, (exists) => {
     if (!exists) {
@@ -46,10 +47,7 @@ server.listen(PORT, () => {
   const url = `http://localhost:${PORT}`;
   console.log(`\n==================================================`);
   console.log(` 🌍 GlobalHunt AI Dev Server Running!`);
-  console.log(` 🚀 Local URL: ${url}`);
+  console.log(` 🚀 App URL: ${url}`);
+  console.log(` 🔍 Curly API Tester Page: ${url}/curly-search.html`);
   console.log(`==================================================\n`);
-
-  // Auto-open browser on Windows
-  const startCmd = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
-  exec(`${startCmd} ${url}`);
 });
